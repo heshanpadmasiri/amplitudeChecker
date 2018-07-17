@@ -1,9 +1,19 @@
 package com.hola.heshan.hola;
 
+import android.Manifest;
 import android.app.FragmentTransaction;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -13,13 +23,21 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 public class NavigationActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
-    private android.support.v4.app.FragmentTransaction fragmentTransaction;
+    private BluetoothDevice door;
+    private Handler messageHandler;
+    private BluetoothAdapter bluetoothAdapter;
+    private volatile boolean bluetoothReady;
 
+    private android.support.v4.app.FragmentTransaction fragmentTransaction;
     private HomeFragment homeFragment;
+
+    private static final int ENABLE_BLUETOOTH_REQUEST = 1;
+    private static final int LOCATION_PERMISSION_REQUEST = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +70,44 @@ public class NavigationActivity extends AppCompatActivity
         fragmentTransaction = getSupportFragmentManager().beginTransaction();
         fragmentTransaction.add(R.id.fragment_container,homeFragment);
         fragmentTransaction.commit();
+
+        // set up bluetooth
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        bluetoothReady = false;
+        if(bluetoothAdapter == null){
+            Toast.makeText(this, "Device don't support bluetooth", Toast.LENGTH_LONG).show();
+        } else {
+            // enable bluetooth
+            bluetoothReady = bluetoothAdapter.isEnabled();
+            if (!bluetoothReady){
+                Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                startActivityForResult(enableBluetoothIntent,ENABLE_BLUETOOTH_REQUEST);
+            } else {
+                onBlueToothReady();
+            }
+        }
+
+    }
+
+    private void onBlueToothReady(){
+
+    }
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == ENABLE_BLUETOOTH_REQUEST){
+            if (resultCode == RESULT_OK){
+                bluetoothReady = bluetoothAdapter.isEnabled();
+                Toast.makeText(this, "Bluetooth Enabled",Toast.LENGTH_LONG).show();
+                onBlueToothReady();
+            } else {
+                Toast.makeText(this, "Bluetooth enable refused", Toast.LENGTH_LONG).show();
+            }
+        } else {
+            super.onActivityResult(requestCode, resultCode, data);
+        }
+
     }
 
     @Override
