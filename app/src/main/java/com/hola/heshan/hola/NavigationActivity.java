@@ -9,11 +9,14 @@ import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -25,8 +28,22 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.aitorvs.android.fingerlock.FingerLockManager;
+import com.aitorvs.android.fingerlock.FingerprintDialog;
+
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.spec.RSAKeyGenParameterSpec;
+
+import javax.crypto.KeyGenerator;
+
+import static java.security.spec.RSAKeyGenParameterSpec.F4;
+
 public class NavigationActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+        implements NavigationView.OnNavigationItemSelectedListener, FingerprintDialog.Callback {
 
     private BluetoothDevice door;
     private Handler messageHandler;
@@ -38,6 +55,9 @@ public class NavigationActivity extends AppCompatActivity
 
     private static final int ENABLE_BLUETOOTH_REQUEST = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2;
+
+    private FingerLockManager fingerLockManager;
+    private static final String KEY_ALIAS = "key";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +105,36 @@ public class NavigationActivity extends AppCompatActivity
             } else {
                 onBlueToothReady();
             }
+        }
+        createKeys(KEY_ALIAS,false);
+        // create and show the fingerprint dialog using the Builder
+        new FingerprintDialog.Builder()
+                .with(NavigationActivity.this)    // context, must call
+                .setKeyName(KEY_ALIAS)       // String key name, must call
+                .setRequestCode(69)         // request code identifier, must call
+                .show();                    // show the dialog
+    }
+
+
+    static void createKeys(String alias, boolean requireAuth) {
+        // Get an instance to the key generator using AES
+        KeyGenerator keyGenerator = null;
+        try {
+            keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+            int purpose = KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT;
+            // to make it harder, byte padding
+            String padding = KeyProperties.ENCRYPTION_PADDING_PKCS7;
+            // Init the generator
+            keyGenerator.init(new KeyGenParameterSpec.Builder(alias, purpose)
+                    .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
+                    // key allowed only when user is authenticated
+                    .setUserAuthenticationRequired(true)
+                    .setEncryptionPaddings(padding)
+                    .build());
+        // generate the key
+            keyGenerator.generateKey();
+        } catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidAlgorithmParameterException e) {
+            e.printStackTrace();
         }
 
     }
@@ -167,5 +217,25 @@ public class NavigationActivity extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    @Override
+    public void onFingerprintDialogAuthenticated() {
+        Toast.makeText(this,"Fingerprint authenticated",Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onFingerprintDialogVerifyPassword(FingerprintDialog fingerprintDialog, String s) {
+
+    }
+
+    @Override
+    public void onFingerprintDialogStageUpdated(FingerprintDialog fingerprintDialog, FingerprintDialog.Stage stage) {
+
+    }
+
+    @Override
+    public void onFingerprintDialogCancelled() {
+
     }
 }
