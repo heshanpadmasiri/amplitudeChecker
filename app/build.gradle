@@ -30,4 +30,6 @@ dependencies {
     implementation 'com.github.aitorvs.fingerlock:core:1.0.0'
     implementation 'com.github.aitorvs.fingerlock:dialog:1.0.0'
     implementation 'com.multidots:fingerprint-auth:1.0.1'
+    implementation 'com.afollestad.material-dialogs:core:0.9.6.0'
+    implementation 'com.afollestad.material-dialogs:commons:0.9.6.0'
 }
