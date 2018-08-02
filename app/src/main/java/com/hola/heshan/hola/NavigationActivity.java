@@ -1,5 +1,6 @@
 package com.hola.heshan.hola;
 
+import android.app.FragmentTransaction;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
@@ -143,9 +144,11 @@ public class NavigationActivity extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_home) {
-            fragmentTransaction.add(R.id.fragment_container,homeFragment);
-            fragmentTransaction.addToBackStack(null);
-            fragmentTransaction.commit();
+            android.support.v4.app.FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+
+            transaction.replace(R.id.fragment_container,homeFragment);
+            transaction.addToBackStack(null);
+            transaction.commit();
         } else if (id == R.id.nav_gallery) {
 
         } else if (id == R.id.nav_slideshow) {

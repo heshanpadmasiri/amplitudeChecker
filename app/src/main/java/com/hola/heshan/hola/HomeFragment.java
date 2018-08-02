@@ -13,6 +13,10 @@ import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
+import com.google.android.gms.tasks.Continuation;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.functions.FirebaseFunctions;
+import com.google.firebase.functions.HttpsCallableResult;
 import com.multidots.fingerprintauth.FingerPrintAuthCallback;
 import com.multidots.fingerprintauth.FingerPrintAuthHelper;
 
@@ -23,8 +27,11 @@ import com.multidots.fingerprintauth.FingerPrintAuthHelper;
 public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
 
     private Button authenticateButton;
+    private Button permissionButton;
     private FingerPrintAuthHelper fingerPrintAuthHelper;
     private MaterialDialog fingerPrintAuthPrompt;
+    private FirebaseFunctions firebaseFunctions;
+
 
     public HomeFragment() {
         // Required empty public constructor
@@ -36,8 +43,12 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view =  inflater.inflate(R.layout.fragment_home, container, false);
-        authenticateButton = view.findViewById(R.id.btn_auth);
+        firebaseFunctions = FirebaseFunctions.getInstance();
         fingerPrintAuthHelper = FingerPrintAuthHelper.getHelper(view.getContext(),this);
+
+        authenticateButton = view.findViewById(R.id.btn_auth);
+        permissionButton = view.findViewById(R.id.btn_permission);
+
         authenticateButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -55,6 +66,13 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
                         .build();
                 fingerPrintAuthPrompt.show();
                 fingerPrintAuthHelper.startAuth();
+            }
+        });
+
+        permissionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                checkPermission();
             }
         });
         return view;
@@ -87,5 +105,18 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
     public void onAuthFailed(int errorCode, String errorMessage) {
 
         Toast.makeText(getActivity(),"AuthFailed", Toast.LENGTH_LONG).show();
+    }
+
+    private Task<Boolean> checkPermission(){
+        return firebaseFunctions
+                .getHttpsCallable("checkPermission")
+                .call()
+                .continueWith(new Continuation<HttpsCallableResult, Boolean>() {
+                    @Override
+                    public Boolean then(@NonNull Task<HttpsCallableResult> task) throws Exception {
+                        Object result = task.getResult().getData();
+                        return (boolean) result;
+                    }
+                });
     }
 }

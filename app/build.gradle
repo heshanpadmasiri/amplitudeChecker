@@ -32,7 +32,8 @@ dependencies {
     implementation 'com.multidots:fingerprint-auth:1.0.1'
     implementation 'com.afollestad.material-dialogs:core:0.9.6.0'
     implementation 'com.afollestad.material-dialogs:commons:0.9.6.0'
-    implementation 'com.google.firebase:firebase-core:16.0.0'
+    implementation 'com.google.firebase:firebase-core:16.0.1'
+    implementation 'com.google.firebase:firebase-functions:16.1.0'
 }
 
 apply plugin: 'com.google.gms.google-services'
