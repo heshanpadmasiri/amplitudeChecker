@@ -14,6 +14,7 @@ import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
+import com.github.ybq.android.spinkit.SpinKitView;
 import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -42,6 +43,7 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
     private Button permissionButton;
     private TextView titleTextView;
     private TextView bodyTextView;
+    private SpinKitView spinKitView;
     private FingerPrintAuthHelper fingerPrintAuthHelper;
     private MaterialDialog fingerPrintAuthPrompt;
     private volatile int fingerPrintAuthPromptTask;
@@ -71,6 +73,8 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
         permissionButton = view.findViewById(R.id.btn_permission);
         titleTextView = view.findViewById(R.id.txt_title);
         bodyTextView = view.findViewById(R.id.txt_body);
+        spinKitView = view.findViewById(R.id.spin_kit);
+        spinKitView.setVisibility(View.INVISIBLE);
 
         authenticateButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -96,6 +100,7 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
         permissionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View v) {
+                spinKitView.setVisibility(View.VISIBLE);
                 Task<DocumentSnapshot> doorDataTask = getDoorData();
                 doorDataTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                     @Override
@@ -109,9 +114,11 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
                                 public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                                     if(task.isSuccessful()){
                                         String userPermission = (String) task.getResult().get("permission_level");
+                                        spinKitView.setVisibility(View.INVISIBLE);
                                         if(reqPermission.equals(userPermission)){
                                             // todo : open the door
                                         } else {
+
                                             updateText("No permission", "Request permission confirm by fingerPrint");
                                             fingerPrintAuthPromptTask = REQUEST_ACCESS_PERMISSION;
                                             fingerPrintAuthHelper.startAuth();
