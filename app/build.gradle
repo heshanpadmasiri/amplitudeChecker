@@ -34,6 +34,7 @@ dependencies {
     implementation 'com.afollestad.material-dialogs:commons:0.9.6.0'
     implementation 'com.google.firebase:firebase-core:16.0.1'
     implementation 'com.google.firebase:firebase-functions:16.1.0'
+    implementation 'com.google.firebase:firebase-firestore:17.0.4'
 }
 
 apply plugin: 'com.google.gms.google-services'

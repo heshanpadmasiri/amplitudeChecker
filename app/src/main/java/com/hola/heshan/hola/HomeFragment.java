@@ -14,11 +14,22 @@ import android.widget.Toast;
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.google.android.gms.tasks.Continuation;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.functions.FirebaseFunctions;
 import com.google.firebase.functions.HttpsCallableResult;
 import com.multidots.fingerprintauth.FingerPrintAuthCallback;
 import com.multidots.fingerprintauth.FingerPrintAuthHelper;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -32,7 +43,8 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
     private MaterialDialog fingerPrintAuthPrompt;
     private FirebaseFunctions firebaseFunctions;
 
-
+    private final static String USER_ID = "test_user_1";
+    private final static String DOOR_ID = "1";
     public HomeFragment() {
         // Required empty public constructor
     }
@@ -72,10 +84,56 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
         permissionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                checkPermission();
+                Task<DocumentSnapshot> doorDataTask = getDoorData();
+                doorDataTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        if(task.isSuccessful()){
+                            final String reqPermission = (String) task.getResult().get("permission_level");
+                            final String companyId = (String) task.getResult().get("company_id");
+                            Task<DocumentSnapshot> userDataTask = getUserData();
+                            userDataTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                                @Override
+                                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                    if(task.isSuccessful()){
+                                        String userPermission = (String) task.getResult().get("permission_level");
+                                        if(reqPermission.equals(userPermission)){
+                                            // todo : open the door
+                                        } else {
+                                            requestPermission(USER_ID,companyId);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
             }
         });
         return view;
+    }
+
+    private void requestPermission(final String userId, String companyId){
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        final DocumentReference docRef = db.collection("pending_request").document(companyId);
+        docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if(task.isSuccessful()){
+                    List<String> currentRequest = (List<String>) task.getResult().get("pending_users");
+                    if(currentRequest != null){
+                        currentRequest.add(userId);
+                        docRef.update("pending_users",currentRequest);
+                    } else {
+                        Map<String,Object> valueMap = new HashMap<>();
+                        List<String> pendingUsers = new ArrayList<>();
+                        pendingUsers.add(userId);
+                        valueMap.put("pending_users", pendingUsers);
+                        docRef.set(valueMap);
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -107,16 +165,15 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
         Toast.makeText(getActivity(),"AuthFailed", Toast.LENGTH_LONG).show();
     }
 
-    private Task<Boolean> checkPermission(){
-        return firebaseFunctions
-                .getHttpsCallable("checkPermission")
-                .call()
-                .continueWith(new Continuation<HttpsCallableResult, Boolean>() {
-                    @Override
-                    public Boolean then(@NonNull Task<HttpsCallableResult> task) throws Exception {
-                        Object result = task.getResult().getData();
-                        return (boolean) result;
-                    }
-                });
+    private Task<DocumentSnapshot> getUserData(){
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        return db.collection("users").document(USER_ID).get();
     }
+
+    private Task<DocumentSnapshot> getDoorData(){
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        return db.collection("doors").document(DOOR_ID).get();
+    }
+
+
 }
