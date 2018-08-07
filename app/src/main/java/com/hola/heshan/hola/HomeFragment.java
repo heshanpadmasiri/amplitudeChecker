@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
@@ -39,12 +40,20 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
 
     private Button authenticateButton;
     private Button permissionButton;
+    private TextView titleTextView;
+    private TextView bodyTextView;
     private FingerPrintAuthHelper fingerPrintAuthHelper;
     private MaterialDialog fingerPrintAuthPrompt;
+    private volatile int fingerPrintAuthPromptTask;
     private FirebaseFunctions firebaseFunctions;
+
+    private volatile String companyId;
 
     private final static String USER_ID = "test_user_1";
     private final static String DOOR_ID = "1";
+
+    private final static int VALIDATE_USER = 0;
+    private final static int REQUEST_ACCESS_PERMISSION = 1;
     public HomeFragment() {
         // Required empty public constructor
     }
@@ -60,6 +69,8 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
 
         authenticateButton = view.findViewById(R.id.btn_auth);
         permissionButton = view.findViewById(R.id.btn_permission);
+        titleTextView = view.findViewById(R.id.txt_title);
+        bodyTextView = view.findViewById(R.id.txt_body);
 
         authenticateButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -77,20 +88,21 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
                         })
                         .build();
                 fingerPrintAuthPrompt.show();
+                fingerPrintAuthPromptTask = VALIDATE_USER;
                 fingerPrintAuthHelper.startAuth();
             }
         });
 
         permissionButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
+            public void onClick(final View v) {
                 Task<DocumentSnapshot> doorDataTask = getDoorData();
                 doorDataTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                     @Override
                     public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                         if(task.isSuccessful()){
                             final String reqPermission = (String) task.getResult().get("permission_level");
-                            final String companyId = (String) task.getResult().get("company_id");
+                            companyId = (String) task.getResult().get("company_id");
                             Task<DocumentSnapshot> userDataTask = getUserData();
                             userDataTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                                 @Override
@@ -100,7 +112,9 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
                                         if(reqPermission.equals(userPermission)){
                                             // todo : open the door
                                         } else {
-                                            requestPermission(USER_ID,companyId);
+                                            updateText("No permission", "Request permission confirm by fingerPrint");
+                                            fingerPrintAuthPromptTask = REQUEST_ACCESS_PERMISSION;
+                                            fingerPrintAuthHelper.startAuth();
                                         }
                                     }
                                 }
@@ -136,6 +150,11 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
         });
     }
 
+    private void updateText(String title,String body){
+        titleTextView.setText(title);
+        bodyTextView.setText(body);
+    }
+
     @Override
     public void onNoFingerPrintHardwareFound() {
 
@@ -156,6 +175,12 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
         Toast.makeText(getActivity(),"AuthSuccess", Toast.LENGTH_LONG).show();
         if(fingerPrintAuthPrompt != null){
             fingerPrintAuthPrompt.dismiss();
+        }
+        switch (fingerPrintAuthPromptTask){
+            case REQUEST_ACCESS_PERMISSION:
+                requestPermission(USER_ID,companyId);
+                updateText("","");
+                break;
         }
     }
 
