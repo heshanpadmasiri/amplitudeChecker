@@ -114,10 +114,11 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
                                 public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                                     if(task.isSuccessful()){
                                         String userPermission = (String) task.getResult().get("permission_level");
+                                        String userCompany = (String) task.getResult().get("company_id");
                                         spinKitView.setVisibility(View.INVISIBLE);
                                         if(reqPermission.equals(userPermission)){
                                             // todo : open the door
-                                        } else {
+                                        } else if (!userCompany.equals(companyId)){
 
                                             updateText("No permission", "Request permission confirm by fingerPrint");
                                             fingerPrintAuthPromptTask = REQUEST_ACCESS_PERMISSION;

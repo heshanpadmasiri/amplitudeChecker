@@ -1,6 +1,5 @@
 package com.hola.heshan.hola;
 
-import android.app.FragmentTransaction;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
