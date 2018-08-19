@@ -51,6 +51,8 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
 
     private volatile String companyId;
 
+    private FirebaseServices firebaseServices;
+
     private final static String USER_ID = "test_user_1";
     private final static String DOOR_ID = "1";
 
@@ -75,7 +77,7 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
         bodyTextView = view.findViewById(R.id.txt_body);
         spinKitView = view.findViewById(R.id.spin_kit);
         spinKitView.setVisibility(View.INVISIBLE);
-
+        firebaseServices = FirebaseServices.getInstance();
         authenticateButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -101,14 +103,14 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
             @Override
             public void onClick(final View v) {
                 spinKitView.setVisibility(View.VISIBLE);
-                Task<DocumentSnapshot> doorDataTask = getDoorData();
+                Task<DocumentSnapshot> doorDataTask = firebaseServices.getDoorData(DOOR_ID);
                 doorDataTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                     @Override
                     public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                         if(task.isSuccessful()){
                             final String reqPermission = (String) task.getResult().get("permission_level");
                             companyId = (String) task.getResult().get("company_id");
-                            Task<DocumentSnapshot> userDataTask = getUserData();
+                            Task<DocumentSnapshot> userDataTask = firebaseServices.getUserData(USER_ID);
                             userDataTask.addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                                 @Override
                                 public void onComplete(@NonNull Task<DocumentSnapshot> task) {
@@ -133,29 +135,6 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
             }
         });
         return view;
-    }
-
-    private void requestPermission(final String userId, String companyId){
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        final DocumentReference docRef = db.collection("pending_request").document(companyId);
-        docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                if(task.isSuccessful()){
-                    List<String> currentRequest = (List<String>) task.getResult().get("pending_users");
-                    if(currentRequest != null){
-                        currentRequest.add(userId);
-                        docRef.update("pending_users",currentRequest);
-                    } else {
-                        Map<String,Object> valueMap = new HashMap<>();
-                        List<String> pendingUsers = new ArrayList<>();
-                        pendingUsers.add(userId);
-                        valueMap.put("pending_users", pendingUsers);
-                        docRef.set(valueMap);
-                    }
-                }
-            }
-        });
     }
 
     private void updateText(String title,String body){
@@ -186,7 +165,7 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
         }
         switch (fingerPrintAuthPromptTask){
             case REQUEST_ACCESS_PERMISSION:
-                requestPermission(USER_ID,companyId);
+                firebaseServices.requestPermission(USER_ID,companyId);
                 updateText("","");
                 break;
         }
@@ -197,16 +176,4 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
 
         Toast.makeText(getActivity(),"AuthFailed", Toast.LENGTH_LONG).show();
     }
-
-    private Task<DocumentSnapshot> getUserData(){
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        return db.collection("users").document(USER_ID).get();
-    }
-
-    private Task<DocumentSnapshot> getDoorData(){
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        return db.collection("doors").document(DOOR_ID).get();
-    }
-
-
 }
