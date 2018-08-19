@@ -1,5 +1,6 @@
 package com.hola.heshan.hola;
 
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -14,14 +15,14 @@ import java.util.List;
 import java.util.Map;
 
 public class FirebaseServices {
-    private static FirebaseServices instance;
+    private static FirebaseServices instance = new FirebaseServices();
     private FirebaseFirestore db;
 
     private FirebaseServices(){
         db = FirebaseFirestore.getInstance();
     }
 
-    public static FirebaseServices getInstance() {
+    public static FirebaseServices getInstance(){
         return instance;
     }
 
@@ -48,6 +49,30 @@ public class FirebaseServices {
                         List<String> pendingUsers = new ArrayList<>();
                         pendingUsers.add(userId);
                         valueMap.put("pending_users", pendingUsers);
+                        docRef.set(valueMap);
+                    }
+                }
+            }
+        });
+    }
+
+    protected void recordAttendance(final String userId, final String companyId){
+        final  DocumentReference docRef = db.collection("attendance_records").document(companyId);
+        docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if(task.isSuccessful()){
+                    List<String> currentAttendance = (List<String>) task.getResult().get("current_attendance");
+                    if (currentAttendance != null){
+                        if(!currentAttendance.contains(userId)){
+                            currentAttendance.add(userId);
+                            docRef.update("current_attendance",currentAttendance);
+                        }
+                    } else {
+                        Map<String,Object> valueMap = new HashMap<>();
+                        currentAttendance = new ArrayList<>();
+                        currentAttendance.add(userId);
+                        valueMap.put("current_attendance",currentAttendance);
                         docRef.set(valueMap);
                     }
                 }

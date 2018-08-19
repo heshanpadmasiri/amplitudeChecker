@@ -41,6 +41,7 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
 
     private Button authenticateButton;
     private Button permissionButton;
+    private Button attendanceButton;
     private TextView titleTextView;
     private TextView bodyTextView;
     private SpinKitView spinKitView;
@@ -73,6 +74,7 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
 
         authenticateButton = view.findViewById(R.id.btn_auth);
         permissionButton = view.findViewById(R.id.btn_permission);
+        attendanceButton = view.findViewById(R.id.btn_attendance);
         titleTextView = view.findViewById(R.id.txt_title);
         bodyTextView = view.findViewById(R.id.txt_body);
         spinKitView = view.findViewById(R.id.spin_kit);
@@ -132,6 +134,13 @@ public class HomeFragment extends Fragment implements FingerPrintAuthCallback{
                         }
                     }
                 });
+            }
+        });
+
+        attendanceButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                firebaseServices.recordAttendance(USER_ID,"COMPANY1");
             }
         });
         return view;

@@ -27,6 +27,12 @@
         android:layout_height="wrap_content"
         android:text="Button" />
 
+    <Button
+        android:id="@+id/btn_attendance"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Attendance" />
+
     <TextView
         android:id="@+id/txt_title"
         android:layout_width="match_parent"
