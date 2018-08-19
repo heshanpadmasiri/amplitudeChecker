@@ -5,6 +5,8 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
@@ -18,6 +20,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import java.util.Arrays;
+import java.util.Set;
+
 public class NavigationActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener{
 
@@ -25,6 +30,7 @@ public class NavigationActivity extends AppCompatActivity
     private Handler messageHandler;
     private BluetoothAdapter bluetoothAdapter;
     private volatile boolean bluetoothReady;
+    private BluetoothServices bluetoothService;
 
     private android.support.v4.app.FragmentTransaction fragmentTransaction;
     private HomeFragment homeFragment;
@@ -84,9 +90,34 @@ public class NavigationActivity extends AppCompatActivity
     }
 
     private void onBlueToothReady(){
+        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
+        BluetoothDevice testDevice = null;
+        for (BluetoothDevice device: pairedDevices){
+            if (device.getName().equals("HC-05")){
+                testDevice = device;
+                break;
+            }
+        }
 
+        messageHandler = new Handler(Looper.getMainLooper()){
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what){
+                    case BluetoothMessages.TEST_MESSAGE:
+                        byte[] data = (byte[]) msg.obj;
+                        onMessageRecieve(data);
+                }
+            }
+        };
+        bluetoothService = new BluetoothServices(messageHandler,testDevice);
+        bluetoothService.start();
     }
 
+
+    private void onMessageRecieve(byte[] msg){
+        Toast.makeText(this,Arrays.toString(msg), Toast.LENGTH_LONG).show();
+        bluetoothService.write("y".getBytes());
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
