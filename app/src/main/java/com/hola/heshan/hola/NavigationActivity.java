@@ -20,6 +20,16 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Arrays;
 import java.util.Set;
 
@@ -32,11 +42,14 @@ public class NavigationActivity extends AppCompatActivity
     private volatile boolean bluetoothReady;
     private BluetoothServices bluetoothService;
 
+    private BlockChainService blockChainService;
     private android.support.v4.app.FragmentTransaction fragmentTransaction;
     private HomeFragment homeFragment;
 
     private static final int ENABLE_BLUETOOTH_REQUEST = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2;
+
+    private final static String URL = "http://192.168.43.5:3000/api";
 
     private static final String KEY_ALIAS = "key";
 
@@ -44,10 +57,10 @@ public class NavigationActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_navigation);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -56,13 +69,13 @@ public class NavigationActivity extends AppCompatActivity
             }
         });
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
         // Create Fragments
@@ -71,6 +84,9 @@ public class NavigationActivity extends AppCompatActivity
         fragmentTransaction = getSupportFragmentManager().beginTransaction();
         fragmentTransaction.add(R.id.fragment_container,homeFragment);
         fragmentTransaction.commit();
+
+        // setup blockChain
+        blockChainService = BlockChainService.getInstance();
 
         // set up bluetooth
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -102,10 +118,15 @@ public class NavigationActivity extends AppCompatActivity
         messageHandler = new Handler(Looper.getMainLooper()){
             @Override
             public void handleMessage(Message msg) {
+                byte[] data = (byte[]) msg.obj;
                 switch (msg.what){
                     case BluetoothMessages.TEST_MESSAGE:
-                        byte[] data = (byte[]) msg.obj;
                         onMessageRecieve(data);
+                        break;
+                    case BluetoothMessages.IDENTIFICATION_MESSAGE:
+                        String doorId = Arrays.toString(data);
+                        connectToBlockChain(doorId);
+                        break;
                 }
             }
         };
@@ -113,6 +134,43 @@ public class NavigationActivity extends AppCompatActivity
         bluetoothService.start();
     }
 
+    private void connectToBlockChain(String doorId){
+        RequestQueue queue = Volley.newRequestQueue(this);
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.GET, URL + "Door/" + doorId, null, new Response.Listener<JSONObject>() {
+
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            String passcode = (String) response.get("password");
+                            onPasscodeReady(passcode);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // TODO: Handle error
+
+                    }
+                });
+        queue.add(jsonObjectRequest);
+    }
+
+    private void onPasscodeReady(String passcode){
+        bluetoothService.write(passcode.getBytes());
+    }
+
+    private void initiateHandshake(String doorId){
+        if(homeFragment.getBluetoothServices() == null){
+            homeFragment.setBluetoothServices(bluetoothService);
+        }
+        homeFragment.initiateHandshake(doorId,HomeFragment.USER_ID);
+//        String passCode = blockChainService.getPasscode(doorId,HomeFragment.USER_ID);
+//        bluetoothService.write(passCode.getBytes());
+    }
 
     private void onMessageRecieve(byte[] msg){
         Toast.makeText(this,Arrays.toString(msg), Toast.LENGTH_LONG).show();
@@ -137,7 +195,7 @@ public class NavigationActivity extends AppCompatActivity
 
     @Override
     public void onBackPressed() {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else {
@@ -175,7 +233,6 @@ public class NavigationActivity extends AppCompatActivity
 
         if (id == R.id.nav_home) {
             android.support.v4.app.FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-
             transaction.replace(R.id.fragment_container,homeFragment);
             transaction.addToBackStack(null);
             transaction.commit();
@@ -191,7 +248,7 @@ public class NavigationActivity extends AppCompatActivity
 
         }
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }

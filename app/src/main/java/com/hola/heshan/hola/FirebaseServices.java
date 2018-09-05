@@ -1,6 +1,5 @@
 package com.hola.heshan.hola;
 
-import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 
 import com.google.android.gms.tasks.OnCompleteListener;

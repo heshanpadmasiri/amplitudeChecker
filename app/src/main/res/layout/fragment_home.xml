@@ -33,6 +33,12 @@
         android:layout_height="wrap_content"
         android:text="Attendance" />
 
+    <Button
+        android:id="@+id/btn_blockChain"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BlockChain" />
+
     <TextView
         android:id="@+id/txt_title"
         android:layout_width="match_parent"
