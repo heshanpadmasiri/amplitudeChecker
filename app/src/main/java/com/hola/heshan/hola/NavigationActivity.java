@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.media.MediaRecorder;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
@@ -37,11 +38,12 @@ import java.io.IOException;
 import java.util.Objects;
 
 public class NavigationActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener{
+        implements NavigationView.OnNavigationItemSelectedListener, SettingsFragment.OnFragmentInteractionListener{
 
 
     private android.support.v4.app.FragmentTransaction fragmentTransaction;
     private HomeFragment homeFragment;
+    private SettingsFragment settingsFragment;
 
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 1;
 
@@ -87,6 +89,7 @@ public class NavigationActivity extends AppCompatActivity
 
         // Create Fragments
         homeFragment = new HomeFragment();
+        settingsFragment = new SettingsFragment();
         // set fragment to home
         fragmentTransaction = getSupportFragmentManager().beginTransaction();
         fragmentTransaction.add(R.id.fragment_container,homeFragment);
@@ -182,6 +185,10 @@ public class NavigationActivity extends AppCompatActivity
         } else if (id == R.id.nav_slideshow) {
 
         } else if (id == R.id.nav_manage) {
+            android.support.v4.app.FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+            transaction.replace(R.id.fragment_container,settingsFragment);
+            transaction.addToBackStack(null);
+            transaction.commit();
 
         } else if (id == R.id.nav_share) {
 
@@ -192,6 +199,11 @@ public class NavigationActivity extends AppCompatActivity
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    @Override
+    public void onFragmentInteraction(Uri uri) {
+
     }
 
     class UpdateThread extends Thread {
