@@ -55,7 +55,16 @@ public class NavigationActivity extends AppCompatActivity
     private volatile boolean isRecording;
     private UpdateThread updateThread;
 
-    private static String URL = "http://192.168.43.5:3000/api";
+    private static String URL;
+    private static String deviceId;
+
+    public static String getDeviceId() {
+        return deviceId;
+    }
+
+    public static void setDeviceId(String deviceId) {
+        NavigationActivity.deviceId = deviceId;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

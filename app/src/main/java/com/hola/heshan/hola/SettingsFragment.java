@@ -3,10 +3,12 @@ package com.hola.heshan.hola;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.design.widget.TextInputEditText;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 
 
 /**
@@ -28,6 +30,10 @@ public class SettingsFragment extends Fragment {
     private String mParam2;
 
     private OnFragmentInteractionListener mListener;
+
+    private TextInputEditText domain;
+    private TextInputEditText deviceId;
+    private Button confirmButton;
 
     public SettingsFragment() {
         // Required empty public constructor
@@ -64,7 +70,26 @@ public class SettingsFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_settings, container, false);
+        View view = inflater.inflate(R.layout.fragment_settings, container, false);
+        domain = view.findViewById(R.id.txt_domain);
+        deviceId = view.findViewById(R.id.txt_device_id);
+
+        if(NavigationActivity.getURL() != null){
+            domain.setText(NavigationActivity.getURL());
+        }
+        if(NavigationActivity.getDeviceId() != null){
+            domain.setText(NavigationActivity.getDeviceId());
+        }
+
+        confirmButton = view.findViewById(R.id.btn_domain_confirm);
+        confirmButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                NavigationActivity.setDeviceId(deviceId.getText().toString());
+                NavigationActivity.setURL(deviceId.getText().toString());
+            }
+        });
+        return view;
     }
 
     // TODO: Rename method, update argument and hook method into UI event
