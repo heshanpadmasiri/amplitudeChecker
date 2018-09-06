@@ -227,8 +227,8 @@ public class NavigationActivity extends AppCompatActivity
             while (isRecording){
                 final int amplitude = mediaRecorder.getMaxAmplitude();
                 if (NavigationActivity.getURL() != null){
-                    CommunicationThread commThread = new CommunicationThread(NavigationActivity.getURL(),amplitude, context);
-                    //commThread.start();
+                    CommunicationThread commThread = new CommunicationThread(NavigationActivity.getURL(),amplitude/128, context);
+                    commThread.start();
                 }
 
                 try {
@@ -259,7 +259,7 @@ public class NavigationActivity extends AppCompatActivity
         private void connectToBackEnd(String URL,String amplitude){
             RequestQueue queue = Volley.newRequestQueue(context);
             JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
-                    (Request.Method.POST, URL  + '/' + amplitude, null, new Response.Listener<JSONObject>() {
+                    (Request.Method.POST, URL  + "/audio/set/" + deviceId + " / " + amplitude, null, new Response.Listener<JSONObject>() {
 
                         @Override
                         public void onResponse(JSONObject response) {
