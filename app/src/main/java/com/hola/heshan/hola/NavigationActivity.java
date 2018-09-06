@@ -1,15 +1,18 @@
 package com.hola.heshan.hola;
 
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.content.Intent;
+import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -18,7 +21,8 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Toast;
+import android.widget.Button;
+import android.widget.TextView;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -27,31 +31,29 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Arrays;
-import java.util.Set;
+import java.io.IOException;
+import java.util.Objects;
 
 public class NavigationActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener{
 
-    private BluetoothDevice door;
-    private Handler messageHandler;
-    private BluetoothAdapter bluetoothAdapter;
-    private volatile boolean bluetoothReady;
-    private BluetoothServices bluetoothService;
 
-    private BlockChainService blockChainService;
     private android.support.v4.app.FragmentTransaction fragmentTransaction;
     private HomeFragment homeFragment;
 
-    private static final int ENABLE_BLUETOOTH_REQUEST = 1;
-    private static final int LOCATION_PERMISSION_REQUEST = 2;
+    private static final int REQUEST_RECORD_AUDIO_PERMISSION = 1;
 
-    private final static String URL = "http://192.168.43.5:3000/api";
+    private String mFileName;
+    private String[] permissions = {Manifest.permission.RECORD_AUDIO};
+    private Button startButton;
+    private TextView output;
+    private MediaRecorder mediaRecorder;
+    private volatile boolean isRecording;
+    private UpdateThread updateThread;
 
-    private static final String KEY_ALIAS = "key";
+    private static String URL = "http://192.168.43.5:3000/api";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +61,11 @@ public class NavigationActivity extends AppCompatActivity
         setContentView(R.layout.activity_navigation);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        isRecording = false;
+        mFileName = Objects.requireNonNull(getExternalCacheDir()).getAbsolutePath();
+        mFileName += "/testRecord.3gp";
+        ActivityCompat.requestPermissions(this,permissions,REQUEST_RECORD_AUDIO_PERMISSION);
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -85,113 +92,47 @@ public class NavigationActivity extends AppCompatActivity
         fragmentTransaction.add(R.id.fragment_container,homeFragment);
         fragmentTransaction.commit();
 
-        // setup blockChain
-        blockChainService = BlockChainService.getInstance();
-
-        // set up bluetooth
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        bluetoothReady = false;
-        if(bluetoothAdapter == null){
-            Toast.makeText(this, "Device don't support bluetooth", Toast.LENGTH_LONG).show();
-        } else {
-            // enable bluetooth
-            bluetoothReady = bluetoothAdapter.isEnabled();
-            if (!bluetoothReady){
-                Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                startActivityForResult(enableBluetoothIntent,ENABLE_BLUETOOTH_REQUEST);
-            } else {
-                onBlueToothReady();
-            }
-        }
     }
 
-    private void onBlueToothReady(){
-        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
-        BluetoothDevice testDevice = null;
-        for (BluetoothDevice device: pairedDevices){
-            if (device.getName().equals("HC-05")){
-                testDevice = device;
-                break;
-            }
-        }
-
-        messageHandler = new Handler(Looper.getMainLooper()){
-            @Override
-            public void handleMessage(Message msg) {
-                byte[] data = (byte[]) msg.obj;
-                switch (msg.what){
-                    case BluetoothMessages.TEST_MESSAGE:
-                        onMessageRecieve(data);
-                        break;
-                    case BluetoothMessages.IDENTIFICATION_MESSAGE:
-                        String doorId = Arrays.toString(data);
-                        connectToBlockChain(doorId);
-                        break;
-                }
-            }
-        };
-        bluetoothService = new BluetoothServices(messageHandler,testDevice);
-        bluetoothService.start();
+    public static String getURL() {
+        return URL;
     }
 
-    private void connectToBlockChain(String doorId){
-        RequestQueue queue = Volley.newRequestQueue(this);
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
-                (Request.Method.GET, URL + "Door/" + doorId, null, new Response.Listener<JSONObject>() {
-
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        try {
-                            String passcode = (String) response.get("password");
-                            onPasscodeReady(passcode);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }, new Response.ErrorListener() {
-
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        // TODO: Handle error
-
-                    }
-                });
-        queue.add(jsonObjectRequest);
+    public static void setURL(String URL) {
+        NavigationActivity.URL = URL;
     }
 
-    private void onPasscodeReady(String passcode){
-        bluetoothService.write(passcode.getBytes());
-    }
-
-    private void initiateHandshake(String doorId){
-        if(homeFragment.getBluetoothServices() == null){
-            homeFragment.setBluetoothServices(bluetoothService);
-        }
-        homeFragment.initiateHandshake(doorId,HomeFragment.USER_ID);
-//        String passCode = blockChainService.getPasscode(doorId,HomeFragment.USER_ID);
-//        bluetoothService.write(passCode.getBytes());
-    }
-
-    private void onMessageRecieve(byte[] msg){
-        Toast.makeText(this,Arrays.toString(msg), Toast.LENGTH_LONG).show();
-        bluetoothService.write("y".getBytes());
-    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == ENABLE_BLUETOOTH_REQUEST){
-            if (resultCode == RESULT_OK){
-                bluetoothReady = bluetoothAdapter.isEnabled();
-                Toast.makeText(this, "Bluetooth Enabled",Toast.LENGTH_LONG).show();
-                onBlueToothReady();
-            } else {
-                Toast.makeText(this, "Bluetooth enable refused", Toast.LENGTH_LONG).show();
-            }
-        } else {
-            super.onActivityResult(requestCode, resultCode, data);
-        }
+        super.onActivityResult(requestCode, resultCode, data);
 
     }
+
+    private void startRecording() {
+        isRecording = true;
+        mediaRecorder = new MediaRecorder();
+        updateThread = new UpdateThread(this);
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        mediaRecorder.setOutputFile(mFileName);
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+        try {
+            mediaRecorder.prepare();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        mediaRecorder.start();
+        updateThread.start();
+    }
+
+    private void stopRecording(){
+        isRecording = false;
+        mediaRecorder.stop();
+        mediaRecorder.release();
+        mediaRecorder = null;
+    }
+
 
     @Override
     public void onBackPressed() {
@@ -251,6 +192,67 @@ public class NavigationActivity extends AppCompatActivity
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    class UpdateThread extends Thread {
+
+        Context context;
+
+        public UpdateThread(Context context) {
+            this.context = context;
+        }
+
+        @Override
+        public void run() {
+            while (isRecording){
+                final int amplitude = mediaRecorder.getMaxAmplitude();
+                if (NavigationActivity.getURL() != null){
+                    CommunicationThread commThread = new CommunicationThread(NavigationActivity.getURL(),amplitude, context);
+                    commThread.start();
+                }
+
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    class CommunicationThread extends Thread{
+        String url;
+        int amplitude;
+        Context context;
+
+        public CommunicationThread(String url, int amplitude, Context context) {
+            this.context = context;
+            this.url = url;
+            this.amplitude = amplitude;
+        }
+
+        @Override
+        public void run() {
+            connectToBackEnd(this.url,String.valueOf(amplitude));
+        }
+
+        private void connectToBackEnd(String URL,String amplitude){
+            RequestQueue queue = Volley.newRequestQueue(context);
+            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                    (Request.Method.POST, URL  + '/' + amplitude, null, new Response.Listener<JSONObject>() {
+
+                        @Override
+                        public void onResponse(JSONObject response) {
+                            // TODO: Handle response
+                        }
+                    }, new Response.ErrorListener() {
+
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            // TODO: Handle errorURL
+                    }});
+            queue.add(jsonObjectRequest);
+        }
     }
 
 }
