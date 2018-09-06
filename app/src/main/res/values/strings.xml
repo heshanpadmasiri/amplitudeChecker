@@ -13,6 +13,7 @@
     <string name="domain_hint">localhost/etc/public</string>
     <string name="id_label">Device ID:</string>
     <string name="id_hint">1</string>
+    <string name="start_btn">Start</string>
     <string name="confirm_btn">Confirm</string>
     <string name="home_fragment">Home fragment</string>
 </resources>

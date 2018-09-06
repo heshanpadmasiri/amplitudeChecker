@@ -44,6 +44,7 @@ public class NavigationActivity extends AppCompatActivity
     private android.support.v4.app.FragmentTransaction fragmentTransaction;
     private HomeFragment homeFragment;
     private SettingsFragment settingsFragment;
+    private static NavigationActivity instance;
 
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 1;
 
@@ -52,7 +53,7 @@ public class NavigationActivity extends AppCompatActivity
     private Button startButton;
     private TextView output;
     private MediaRecorder mediaRecorder;
-    private volatile boolean isRecording;
+    protected volatile boolean isRecording;
     private UpdateThread updateThread;
 
     private static String URL;
@@ -64,6 +65,10 @@ public class NavigationActivity extends AppCompatActivity
 
     public static void setDeviceId(String deviceId) {
         NavigationActivity.deviceId = deviceId;
+    }
+
+    public static NavigationActivity getInstance() {
+        return instance;
     }
 
     @Override
@@ -95,8 +100,10 @@ public class NavigationActivity extends AppCompatActivity
         fragmentTransaction = getSupportFragmentManager().beginTransaction();
         fragmentTransaction.add(R.id.fragment_container,homeFragment);
         fragmentTransaction.commit();
-
+        instance = this;
     }
+
+
 
     public static String getURL() {
         return URL;
@@ -113,7 +120,7 @@ public class NavigationActivity extends AppCompatActivity
 
     }
 
-    private void startRecording() {
+    void startRecording() {
         isRecording = true;
         mediaRecorder = new MediaRecorder();
         updateThread = new UpdateThread(this);
@@ -130,7 +137,7 @@ public class NavigationActivity extends AppCompatActivity
         updateThread.start();
     }
 
-    private void stopRecording(){
+    void stopRecording(){
         isRecording = false;
         mediaRecorder.stop();
         mediaRecorder.release();
@@ -221,7 +228,7 @@ public class NavigationActivity extends AppCompatActivity
                 final int amplitude = mediaRecorder.getMaxAmplitude();
                 if (NavigationActivity.getURL() != null){
                     CommunicationThread commThread = new CommunicationThread(NavigationActivity.getURL(),amplitude, context);
-                    commThread.start();
+                    //commThread.start();
                 }
 
                 try {
